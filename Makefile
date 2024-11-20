@@ -7,6 +7,7 @@ docker-run:
 	sudo docker run --rm -it llm-server
 
 native-llm:
+	mkdir -p llm-native && \
 	cd llm-native && \
 	(git clone https://github.com/ggerganov/llama.cpp.git || true) && \
 	cd llama.cpp && \
