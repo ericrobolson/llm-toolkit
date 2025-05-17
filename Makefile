@@ -1,3 +1,7 @@
+llama-tk: FORCE
+	cd llama-tk && \
+	cargo run
+
 native-llm-run:
 	cd llm-native/llama.cpp/build/bin && \
 	./llama-cli
@@ -18,3 +22,4 @@ native-llm:
 	cmake -B build && \
 	cmake --build build --config Release
 
+FORCE:
