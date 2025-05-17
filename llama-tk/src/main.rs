@@ -20,10 +20,10 @@ fn main() {
             "openhermes-2.5-mistral-7b.Q5_K_S.gguf",
             "https://huggingface.co/TheBloke/OpenHermes-2.5-Mistral-7B-GGUF/resolve/main/openhermes-2.5-mistral-7b.Q5_K_S.gguf",
         ),
-        (
-            "wizardlm-33b-v1.0-uncensored.Q4_K_M.gguf",
-            "https://huggingface.co/TheBloke/WizardLM-33B-V1.0-Uncensored-GGUF/resolve/main/wizardlm-33b-v1.0-uncensored.Q4_K_M.gguf",
-        ),
+        // (
+        //     "wizardlm-33b-v1.0-uncensored.Q4_K_M.gguf",
+        //     "https://huggingface.co/TheBloke/WizardLM-33B-V1.0-Uncensored-GGUF/resolve/main/wizardlm-33b-v1.0-uncensored.Q4_K_M.gguf",
+        // ),
     ];
 
     for (model, url) in models.iter() {
@@ -48,17 +48,19 @@ fn main() {
 
     let (model, _) = &models[index - 1];
 
-    // todo!("Pick model?");
-
-    // let model = "openhermes-2.5-mistral-7b.Q5_K_S.gguf";
-    // // let model = "deepseek-coder-6.7b-instruct.Q4_K_M.gguf";
-
     let server = LlamaServer::new(dir, model.to_string());
     loop {
-        println!("Enter a prompt: ");
+        print!("\n> ");
+        std::io::stdout().flush().unwrap();
+
         let mut input = String::new();
         std::io::stdin().read_line(&mut input).unwrap();
         let prompt = input.trim();
+
+        if prompt == "exit" {
+            break;
+        }
+
         let mut response = server.ask(prompt);
         let mut processing = true;
 
@@ -77,10 +79,6 @@ fn main() {
                     processing = false;
                 }
             }
-        }
-
-        if let Some(response) = response.response() {
-            println!("\n\n{}", response);
         }
     }
 }

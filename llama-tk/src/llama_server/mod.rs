@@ -2,24 +2,40 @@ mod response;
 pub use response::*;
 
 use std::{
-    net::TcpStream,
     path::PathBuf,
-    process::Command,
-    sync::mpsc::{Receiver, Sender, channel},
+    process::{Child, Command},
+    sync::mpsc::Sender,
     thread::JoinHandle,
 };
 
+enum Msg {
+    Poll,
+    Kill,
+}
+
 pub struct LlamaServer {
     handle: Option<JoinHandle<()>>,
+    sender: Sender<Msg>,
 }
 impl LlamaServer {
     pub fn new(path: PathBuf, model_name: String) -> Self {
+        let (tx, rx) = std::sync::mpsc::channel();
         let handle = std::thread::spawn(move || {
-            start_server(&path, &model_name);
+            let mut child = start_server(&path, &model_name);
+            for msg in rx.iter() {
+                match msg {
+                    Msg::Poll => {}
+                    Msg::Kill => {
+                        child.kill().unwrap();
+                        return;
+                    }
+                }
+            }
         });
 
         Self {
             handle: Some(handle),
+            sender: tx,
         }
     }
 
@@ -33,9 +49,16 @@ impl LlamaServer {
     }
 }
 
-fn start_server(path: &PathBuf, model_name: &str) {
-    println!("Starting server...");
-    println!("http://127.0.0.1:8080");
+impl Drop for LlamaServer {
+    fn drop(&mut self) {
+        self.sender.send(Msg::Kill).unwrap();
+        self.handle.take().unwrap().join().unwrap();
+    }
+}
+
+fn start_server(path: &PathBuf, model_name: &str) -> Child {
+    // println!("Starting server...");
+    // println!("http://127.0.0.1:8080");
     let repo_path = path.join("llama.cpp");
 
     let models_path = path.join("models");
@@ -44,15 +67,9 @@ fn start_server(path: &PathBuf, model_name: &str) {
     let command = Command::new(bin_path)
         .args(&["--port", "8080"])
         .args(&["--model", model.to_str().unwrap()])
-        .output()
+        .args(&["--log-disable"])
+        .spawn()
         .unwrap();
 
-    if command.status.success() {
-        println!("Server started");
-    } else {
-        panic!(
-            "Server failed to start: {}",
-            String::from_utf8(command.stderr).unwrap()
-        );
-    }
+    command
 }

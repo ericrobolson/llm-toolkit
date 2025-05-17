@@ -1,2 +1,2 @@
 - [x] Spawn server in separate thread
-- [ ] Make a prompt response that streams results
+- [x] Make a prompt response that streams results

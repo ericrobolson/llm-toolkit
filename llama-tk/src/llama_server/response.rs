@@ -30,9 +30,79 @@ sec-ch-ua-platform: "macOS"
 {BODY}
 "#;
 
-const HTTP_REQUEST_BODY: &'static str = r#"
-{"messages":[{"role":"system","content":"You are a helpful assistant."},{"role":"user","content":"sah hi"}],"stream":true,"cache_prompt":true,"samplers":"edkypmxt","temperature":0.8,"dynatemp_range":0,"dynatemp_exponent":1,"top_k":40,"top_p":0.95,"min_p":0.05,"typical_p":1,"xtc_probability":0,"xtc_threshold":0.1,"repeat_last_n":64,"repeat_penalty":1,"presence_penalty":0,"frequency_penalty":0,"dry_multiplier":0,"dry_base":1.75,"dry_allowed_length":2,"dry_penalty_last_n":-1,"max_tokens":-1,"timings_per_token":false}
-"#;
+#[derive(serde::Serialize)]
+struct Message {
+    role: String,
+    content: String,
+}
+
+#[derive(serde::Serialize)]
+struct RequestBody {
+    messages: Vec<Message>,
+    stream: bool,
+    cache_prompt: bool,
+    samplers: String,
+    temperature: f32,
+    dynatemp_range: i32,
+    dynatemp_exponent: i32,
+    top_k: i32,
+    top_p: f32,
+    min_p: f32,
+    typical_p: i32,
+    xtc_probability: i32,
+    xtc_threshold: f32,
+    repeat_last_n: i32,
+    repeat_penalty: i32,
+    presence_penalty: i32,
+    frequency_penalty: i32,
+    dry_multiplier: i32,
+    dry_base: f32,
+    dry_allowed_length: i32,
+    dry_penalty_last_n: i32,
+    max_tokens: i32,
+    timings_per_token: bool,
+}
+
+fn response_body(prompt: &str) -> String {
+    // {"messages":[{"role":"system","content":"You are a helpful assistant."},{"role":"user","content":"sah hi"}],"stream":true,"cache_prompt":true,"samplers":"edkypmxt","temperature":0.8,"dynatemp_range":0,"dynatemp_exponent":1,"top_k":40,"top_p":0.95,"min_p":0.05,"typical_p":1,"xtc_probability":0,"xtc_threshold":0.1,"repeat_last_n":64,"repeat_penalty":1,"presence_penalty":0,"frequency_penalty":0,"dry_multiplier":0,"dry_base":1.75,"dry_allowed_length":2,"dry_penalty_last_n":-1,"max_tokens":-1,"timings_per_token":false}
+
+    let request_body = RequestBody {
+        messages: vec![
+            Message {
+                role: "system".to_string(),
+                content: "You are a helpful assistant.".to_string(),
+            },
+            Message {
+                role: "user".to_string(),
+                content: prompt.to_string(),
+            },
+        ],
+        stream: true,
+        cache_prompt: true,
+        samplers: "edkypmxt".to_string(),
+        temperature: 0.8,
+        dynatemp_range: 0,
+        dynatemp_exponent: 1,
+        top_k: 40,
+        top_p: 0.95,
+        min_p: 0.05,
+        typical_p: 1,
+        xtc_probability: 0,
+        xtc_threshold: 0.1,
+        repeat_last_n: 64,
+        repeat_penalty: 1,
+        presence_penalty: 0,
+        frequency_penalty: 0,
+        dry_multiplier: 0,
+        dry_base: 1.75,
+        dry_allowed_length: 2,
+        dry_penalty_last_n: -1,
+        max_tokens: -1,
+        timings_per_token: false,
+    };
+
+    serde_json::to_string(&request_body).unwrap()
+}
 
 pub struct Response {
     response: String,
@@ -43,11 +113,11 @@ impl Response {
     pub fn begin(address: &str, prompt: &str) -> Self {
         let mut stream = TcpStream::connect(address).unwrap();
 
-        let body = HTTP_REQUEST_BODY;
+        let body = response_body(prompt);
         let byte_length = body.len();
         let request = HTTP_REQUEST.replace("{BYTE_LENGTH}", &byte_length.to_string());
         let request = request
-            .replace("{BODY}", body)
+            .replace("{BODY}", &body)
             .replace("\r\n", "\n")
             .replace("\n", "\r\n");
         stream.write_all(request.as_bytes()).unwrap();
