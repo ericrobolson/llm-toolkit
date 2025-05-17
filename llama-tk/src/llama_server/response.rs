@@ -2,7 +2,6 @@ use std::{
     collections::HashMap,
     io::{Read, Write},
     net::TcpStream,
-    process::Command,
     time::Duration,
 };
 
@@ -131,6 +130,7 @@ impl Response {
         }
     }
 
+    /// Returns a status indicating whether the response is complete or in progress.
     pub fn poll(&mut self) -> Status {
         if self.completed {
             return Status::Complete;
@@ -210,6 +210,7 @@ impl Response {
         Status::Poll { msg: None }
     }
 
+    /// Returns the response if it's complete.
     pub fn response(&self) -> Option<&str> {
         if self.completed {
             Some(&self.response)

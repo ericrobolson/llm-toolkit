@@ -1,2 +1,3 @@
 - [x] Spawn server in separate thread
 - [x] Make a prompt response that streams results
+- [x] Clean up model selection + minor refactor
