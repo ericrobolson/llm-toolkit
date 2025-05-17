@@ -1,5 +1,8 @@
+mod llama_server;
+
+use llama_server::{LlamaServer, Status};
 use rusqlite::Connection;
-use std::{path::PathBuf, process::Command};
+use std::{io::Write, path::PathBuf, process::Command};
 
 fn main() {
     let dir: PathBuf = ".llama-tk/".into();
@@ -49,7 +52,37 @@ fn main() {
 
     // let model = "openhermes-2.5-mistral-7b.Q5_K_S.gguf";
     // // let model = "deepseek-coder-6.7b-instruct.Q4_K_M.gguf";
-    start_server(&dir, model);
+
+    let server = LlamaServer::new(dir, model.to_string());
+    loop {
+        println!("Enter a prompt: ");
+        let mut input = String::new();
+        std::io::stdin().read_line(&mut input).unwrap();
+        let prompt = input.trim();
+        let mut response = server.ask(prompt);
+        let mut processing = true;
+
+        while processing {
+            match response.poll() {
+                Status::Poll { msg } => {
+                    if let Some(msg) = msg {
+                        print!("{}", msg);
+                        std::io::stdout().flush().unwrap();
+                    }
+                }
+                Status::Error { msg } => {
+                    println!("Error: {}", msg);
+                }
+                Status::Complete => {
+                    processing = false;
+                }
+            }
+        }
+
+        if let Some(response) = response.response() {
+            println!("\n\n{}", response);
+        }
+    }
 }
 
 fn setup_db(path: &PathBuf) {
@@ -87,7 +120,7 @@ fn setup_repo(path: &PathBuf) {
     let repo_path = path.join("llama.cpp");
     if !repo_path.exists() {
         println!("Cloning repo...");
-        let command = "git clone https://github.com/ggerganov/llama.cpp.git";
+        // let command = "git clone https://github.com/ggerganov/llama.cpp.git";
 
         let command = Command::new("git")
             .args(&["clone", "https://github.com/ggerganov/llama.cpp.git"])
@@ -104,7 +137,7 @@ fn setup_repo(path: &PathBuf) {
             );
         }
 
-        let command = "cd llama.cpp && cmake -B build && cmake --build build --config Release";
+        // let command = "cd llama.cpp && cmake -B build && cmake --build build --config Release";
 
         let command = Command::new("cmake")
             .args(&["-B", "build"])
@@ -177,6 +210,7 @@ fn source_models(path: &PathBuf, model: &str, url: &str) {
 
         mkdir -p models
         curl -L $URL > models/openhermes-2.5-mistral-7b.Q5_K_S.gguf
+        curl -I $URL
                  */
 
         println!("Downloading model...");
