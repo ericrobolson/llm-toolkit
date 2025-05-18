@@ -15,23 +15,31 @@ pub fn execute(path: &PathBuf, model: &str, url: &str) {
         curl -I $URL
                  */
 
-        println!("Downloading model...");
-        let command = Command::new("curl")
+        println!("Downloading model {}...", model);
+        let mut command = Command::new("curl")
             .args(&["-L", url])
             .args(&["-O"])
             .current_dir(&models_path)
-            .output()
+            .spawn()
             .unwrap();
 
-        println!("{}", String::from_utf8(command.stdout).unwrap());
+        let result = command.wait().unwrap();
 
-        if command.status.success() {
+        if result.success() {
             println!("Model downloaded");
         } else {
-            panic!(
-                "Model failed to download: {}",
-                String::from_utf8(command.stderr).unwrap()
-            );
+            panic!("Model failed to download");
         }
+
+        // println!("{}", String::from_utf8(command.stdout).unwrap());
+
+        // if command.status.success() {
+        //     println!("Model downloaded");
+        // } else {
+        //     panic!(
+        //         "Model failed to download: {}",
+        //         String::from_utf8(command.stderr).unwrap()
+        //     );
+        // }
     }
 }

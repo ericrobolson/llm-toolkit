@@ -13,7 +13,7 @@ fn main() {
     database::setup(&dir);
     build_llama_cpp::execute(&dir);
 
-    let models = vec![
+    let models: Vec<(String, String)> = vec![
         (
             "deepseek-coder-6.7b-instruct.Q4_K_M.gguf",
             "https://huggingface.co/TheBloke/deepseek-coder-6.7B-instruct-GGUF/resolve/main/deepseek-coder-6.7b-instruct.Q4_K_M.gguf",
@@ -26,35 +26,17 @@ fn main() {
         //     "wizardlm-33b-v1.0-uncensored.Q4_K_M.gguf",
         //     "https://huggingface.co/TheBloke/WizardLM-33B-V1.0-Uncensored-GGUF/resolve/main/wizardlm-33b-v1.0-uncensored.Q4_K_M.gguf",
         // ),
-    ];
+        (
+            "orcamaid-v3-13b-32k.Q5_K_S.gguf",
+            "https://huggingface.co/TheBloke/OrcaMaid-v3-13B-32k-GGUF/resolve/main/orcamaid-v3-13b-32k.Q5_K_S.gguf",
+        ),
+    ].iter().map(|(m, u)| (m.to_string(), u.to_string())).collect();
 
     for (model, url) in models.iter() {
         source_models::execute(&dir, model, url);
     }
 
-    let mut model: Option<String> = None;
-    while model.is_none() {
-        println!("\nAvailable models:");
-        for (i, (model, _)) in models.iter().enumerate() {
-            println!("{}. {}", i + 1, model);
-        }
-
-        println!("\nSelect a model (1-{}):", models.len());
-
-        let mut input = String::new();
-        std::io::stdin().read_line(&mut input).unwrap();
-
-        let index = input.trim().parse::<usize>().unwrap_or(0);
-        if index < 1 || index > models.len() {
-            eprintln!("Invalid selection");
-        } else {
-            let (m, _) = &models[index - 1];
-            model = Some(m.to_string());
-        }
-    }
-    let model = model.unwrap();
-
-    let server = LlamaServer::new(dir, model);
+    let mut server = initialize_server(&dir, &models);
 
     // REPL
     loop {
@@ -67,6 +49,11 @@ fn main() {
 
         if prompt == "exit" {
             break;
+        }
+
+        if prompt == "restart" {
+            server = initialize_server(&dir, &models);
+            continue;
         }
 
         let mut response = server.ask(prompt);
@@ -89,4 +76,31 @@ fn main() {
             }
         }
     }
+}
+
+fn initialize_server(dir: &PathBuf, models: &Vec<(String, String)>) -> LlamaServer {
+    let mut model: Option<String> = None;
+    while model.is_none() {
+        println!("\nAvailable models:");
+        for (i, (model, _)) in models.iter().enumerate() {
+            println!("{}. {}", i + 1, model);
+        }
+
+        println!("\nSelect a model (1-{}):", models.len());
+
+        let mut input = String::new();
+        std::io::stdin().read_line(&mut input).unwrap();
+
+        let index = input.trim().parse::<usize>().unwrap_or(0);
+        if index < 1 || index > models.len() {
+            eprintln!("Invalid selection");
+        } else {
+            let (m, _) = &models[index - 1];
+            model = Some(m.to_string());
+        }
+    }
+    let model = model.unwrap();
+
+    let server = LlamaServer::new(dir.clone(), model);
+    server
 }
